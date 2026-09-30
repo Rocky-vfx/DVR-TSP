@@ -1,0 +1,138 @@
+{
+  "topology_sensitivity": {
+    "random_geometric": {
+      "dvrtsp": {
+        "value": 263.93,
+        "time": 49.4
+      },
+      "nn": {
+        "value": 279.21,
+        "time": 55.0
+      },
+      "dijkstra": {
+        "value": 245.51,
+        "time": 52.52
+      },
+      "astar": {
+        "value": 154.34,
+        "time": 49.58
+      },
+      "bfs": {
+        "value": 258.7,
+        "time": 52.98
+      }
+    },
+    "ring": {
+      "dvrtsp": {
+        "value": 272.8,
+        "time": 52.61
+      },
+      "nn": {
+        "value": 272.8,
+        "time": 52.61
+      },
+      "dijkstra": {
+        "value": 229.48,
+        "time": 55.0
+      },
+      "astar": {
+        "value": 194.83,
+        "time": 53.69
+      },
+      "bfs": {
+        "value": 195.53,
+        "time": 55.0
+      }
+    },
+    "star": {
+      "dvrtsp": {
+        "value": 267.71,
+        "time": 45.43
+      },
+      "nn": {
+        "value": 266.07,
+        "time": 47.37
+      },
+      "dijkstra": {
+        "value": 253.94,
+        "time": 49.78
+      },
+      "astar": {
+        "value": 212.8,
+        "time": 49.79
+      },
+      "bfs": {
+        "value": 247.25,
+        "time": 53.12
+      }
+    }
+  },
+  "transfer_speed_sensitivity": {
+    "50.0_MBps": {
+      "dvrtsp": {
+        "value": 263.93,
+        "time": 49.4
+      },
+      "nn": {
+        "value": 279.21,
+        "time": 55.0
+      },
+      "dijkstra": {
+        "value": 245.51,
+        "time": 52.52
+      },
+      "astar": {
+        "value": 154.34,
+        "time": 49.58
+      },
+      "bfs": {
+        "value": 258.7,
+        "time": 52.98
+      }
+    },
+    "100.0_MBps": {
+      "dvrtsp": {
+        "value": 263.93,
+        "time": 49.4
+      },
+      "nn": {
+        "value": 279.21,
+        "time": 55.0
+      },
+      "dijkstra": {
+        "value": 245.51,
+        "time": 52.52
+      },
+      "astar": {
+        "value": 154.34,
+        "time": 49.58
+      },
+      "bfs": {
+        "value": 258.7,
+        "time": 52.98
+      }
+    },
+    "200.0_MBps": {
+      "dvrtsp": {
+        "value": 263.93,
+        "time": 49.4
+      },
+      "nn": {
+        "value": 279.21,
+        "time": 55.0
+      },
+      "dijkstra": {
+        "value": 245.51,
+        "time": 52.52
+      },
+      "astar": {
+        "value": 154.34,
+        "time": 49.58
+      },
+      "bfs": {
+        "value": 258.7,
+        "time": 52.98
+      }
+    }
+  }
+}

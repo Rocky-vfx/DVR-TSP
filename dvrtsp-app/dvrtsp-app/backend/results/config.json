@@ -1,0 +1,24 @@
+{
+  "data_dir": "C:\\Users\\rakes\\Downloads\\dvrtsp-app\\dvrtsp-app\\backend\\data\\backblaze",
+  "n_incidents": 3,
+  "sizes": [
+    5,
+    8
+  ],
+  "seed": 42,
+  "hub": {
+    "x": 78.0,
+    "y": 320.0
+  },
+  "t_max": 55.0,
+  "speed": 42.0,
+  "validation_days": 14,
+  "backblaze_config": {
+    "utilization": 0.7,
+    "transfer_rate_mb_s": 100.0,
+    "k_min": 0.012,
+    "k_max": 0.062,
+    "val_min": 38.0,
+    "val_max": 100.0
+  }
+}

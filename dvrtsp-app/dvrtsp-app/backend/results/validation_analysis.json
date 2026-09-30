@@ -1,0 +1,12 @@
+{
+  "evaluated_failing_drives": 1,
+  "validation_window_days": 14,
+  "average_rank_by_algo": {
+    "dvrtsp": 1.0,
+    "nn": 1.0,
+    "dijkstra": 1.0,
+    "astar": 5.0,
+    "bfs": 1.0
+  },
+  "description": "Lower average rank indicates the algorithm visits failing drives earlier."
+}

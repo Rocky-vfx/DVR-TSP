@@ -1,0 +1,1455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>DVR–TSP // Emergency Data Recovery (Synthetic &amp; Real Data Modes)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,700;1,9..144,600&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* Illustrative "field dossier" palette — warm paper, ink linework, and colored-pencil accents */
+    --bg:#EFE5CD;
+    --bg-grid:#E4D7B2;
+    --panel:#F7F0DE;
+    --panel-2:#EDE0BE;
+    --border:#8C7B52;
+    --border-soft:#D9C79C;
+    --text:#2A2420;
+    --text-dim:#5B5142;
+    --text-faint:#8C816C;
+    --alert:#BD5B32;
+    --alert-dim:#8C4326;
+    --safe:#4F7A63;
+    --safe-dim:#37594A;
+    --gold:#B8862B;
+    --dvrtsp:#2E3E5C;
+    --dvrtsp-dim:#1F2C42;
+    --void:#EFE5CD;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;}
+  body{
+    position:relative;
+    background-image:
+      linear-gradient(var(--bg-grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--bg-grid) 1px, transparent 1px);
+    background-size:28px 28px;
+    min-height:100vh;
+  }
+  /* paper grain */
+  body::before{
+    content:"";
+    position:fixed;inset:0;
+    pointer-events:none;
+    z-index:5;
+    opacity:.5;
+    mix-blend-mode:multiply;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size:180px 180px;
+  }
+  body::after{
+    content:"";
+    position:fixed;inset:0;
+    pointer-events:none;
+    z-index:6;
+    background:radial-gradient(ellipse at 50% 0%, transparent 55%, rgba(42,36,32,.08));
+  }
+  .app{max-width:1420px;margin:0 auto;padding:20px 22px 60px;position:relative;z-index:1;}
+
+  /* ---------- header ---------- */
+  header{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap;
+    border-bottom:2px solid var(--border);padding-bottom:14px;margin-bottom:14px;}
+  .brand-eyebrow{font-size:11px;letter-spacing:.18em;color:var(--text-faint);text-transform:uppercase;margin-bottom:4px;}
+  .brand-title{font-family:'Fraunces',serif;font-weight:700;font-size:34px;letter-spacing:-.01em;color:var(--dvrtsp);display:flex;align-items:baseline;gap:12px;}
+  .brand-title span.sub{font-family:'Fraunces',serif;font-style:italic;font-weight:600;font-size:14px;color:var(--text-dim);letter-spacing:0;}
+  .header-right{display:flex;align-items:center;gap:18px;}
+  .status-block{text-align:right;}
+  .status-label{font-size:10px;letter-spacing:.14em;color:var(--text-faint);text-transform:uppercase;}
+  .status-pill{display:inline-flex;align-items:center;gap:7px;padding:4px 11px;border-radius:999px;font-size:11.5px;font-weight:700;letter-spacing:.06em;margin-top:3px;border:2px dashed;}
+  .status-pill.stable{color:var(--text-dim);border-color:var(--border-soft);background:var(--panel-2);}
+  .status-pill.emergency{color:var(--alert);border-color:var(--alert);border-style:solid;background:#F2DACB;}
+  .status-pill.online{color:var(--safe);border-color:var(--safe-dim);border-style:solid;background:#E1EBE3;}
+  .status-pill.offline{color:var(--alert);border-color:var(--alert);border-style:solid;background:#F2DACB;}
+  .status-dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
+  .status-pill.emergency .status-dot{animation:blink 1s steps(2,jump-none) infinite;}
+  @keyframes blink{50%{opacity:.15;}}
+  @keyframes pulseCritical{0%,100%{opacity:1;}50%{opacity:.35;}}
+  .ring-critical{animation:pulseCritical 0.9s ease-in-out infinite;}
+  .clock{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;color:var(--dvrtsp);font-variant-numeric:tabular-nums;
+    border:1.5px dashed var(--border);border-radius:4px;padding:3px 9px;display:inline-block;background:var(--panel);}
+  .clock .unit{font-size:11px;color:var(--text-faint);font-family:'JetBrains Mono',monospace;font-weight:400;margin-left:3px;}
+
+  /* ---------- Mode Switcher Bar ---------- */
+  .mode-bar{
+    display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;
+    margin-bottom:16px;padding:8px 12px;background:var(--panel-2);border:2px solid var(--border);border-radius:5px;
+  }
+  .mode-segmented{display:inline-flex;border:1.5px solid var(--border);border-radius:4px;overflow:hidden;background:var(--panel);}
+  .mode-btn{
+    font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+    padding:7px 16px;background:transparent;border:none;border-right:1px solid var(--border);cursor:pointer;color:var(--text-dim);
+    transition:all .15s ease;
+  }
+  .mode-btn:last-child{border-right:none;}
+  .mode-btn:hover{background:var(--panel-2);color:var(--text);}
+  .mode-btn.active{background:var(--dvrtsp);color:var(--panel);}
+
+  .topology-badge{
+    display:none;align-items:center;gap:7px;padding:5px 12px;border-radius:4px;
+    background:#F5E8C7;border:1.5px solid var(--gold);color:#6B4B0A;font-size:11px;font-weight:600;
+  }
+  .topology-badge .badge-icon{font-size:12px;color:var(--gold);}
+
+  /* ---------- layout ---------- */
+  .grid{display:grid;grid-template-columns:1fr 400px;gap:18px;align-items:start;}
+  @media (max-width:1060px){.grid{grid-template-columns:1fr;}}
+
+  .panel{background:var(--panel);border:2px solid var(--border);border-radius:5px;overflow:hidden;
+    box-shadow:4px 4px 0 rgba(42,36,32,.10);margin-bottom:18px;}
+  .panel:last-child{margin-bottom:0;}
+  .panel-head{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1.5px dashed var(--border-soft);background:var(--panel-2);}
+  .panel-head h2{font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--text-dim);margin:0;}
+  .panel-head h2::before{content:"◆ ";color:var(--gold);font-size:9px;}
+  .panel-body{padding:14px;}
+
+  /* ---------- graph ---------- */
+  #graphContainer{position:relative;}
+  #graphSvg{width:100%;height:auto;display:block;background:var(--panel);cursor:crosshair;}
+  .node-group{cursor:pointer;}
+  .node-group:hover circle.vault-core{stroke-width:3.2;filter:brightness(1.12);}
+  .node-label{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--text-faint);}
+  .node-value{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;}
+  .edge-sparse{stroke:var(--text-faint);stroke-width:1;stroke-dasharray:2,3;opacity:.55;fill:none;}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:10.5px;color:var(--text-dim);padding:9px 14px;border-top:1.5px dashed var(--border-soft);background:var(--panel-2);}
+  .legend-item{display:flex;align-items:center;gap:6px;}
+  .legend-swatch{width:10px;height:10px;border-radius:50%;display:inline-block;}
+
+  /* ---------- controls ---------- */
+  .field{margin-bottom:12px;}
+  .field label{display:block;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-faint);margin-bottom:5px;font-weight:600;}
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  select, input, button{
+    font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text);
+    background:var(--panel-2);border:2px solid var(--border);border-radius:3px;padding:8px 9px;width:100%;
+  }
+  select{cursor:pointer;}
+  input{background:var(--panel);}
+  button{cursor:pointer;font-weight:700;letter-spacing:.03em;text-transform:uppercase;font-size:11px;
+    box-shadow:2px 2px 0 var(--border);transition:transform .08s ease, box-shadow .08s ease, filter .12s ease;}
+  button:hover{filter:brightness(1.06);transform:translate(-1px,-1px);box-shadow:3px 3px 0 var(--border);}
+  button:active{transform:translate(1px,1px);box-shadow:0px 0px 0 var(--border);}
+  button:disabled{opacity:.4;cursor:not-allowed;filter:none;transform:none;box-shadow:2px 2px 0 var(--border-soft);}
+  .btn-row{display:flex;gap:8px;}
+  .btn-primary{background:var(--dvrtsp);border-color:var(--dvrtsp-dim);color:var(--panel);}
+  .btn-alert{background:var(--alert);border-color:var(--alert-dim);color:#FBF2E6;}
+  .btn-ghost{background:var(--panel);border-color:var(--border);color:var(--text);}
+  .btn-secondary{background:var(--gold);border-color:#8C631B;color:#FFF;}
+
+  /* Replay controls */
+  .replay-box{
+    background:var(--panel-2);border:1.5px dashed var(--border-soft);border-radius:4px;
+    padding:10px;margin-top:12px;display:none;
+  }
+  .replay-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:11px;}
+  .replay-title{font-weight:700;color:var(--dvrtsp);text-transform:uppercase;font-size:10px;letter-spacing:.07em;}
+  .replay-status-pill{font-size:10px;font-weight:700;padding:2px 6px;border-radius:3px;background:var(--panel);border:1px solid var(--border-soft);}
+
+  /* Error Alert Banner */
+  .alert-banner{
+    display:none;background:#F7DFD6;border:2px solid var(--alert);border-radius:4px;
+    padding:12px;margin-bottom:14px;color:var(--alert-dim);font-size:11px;line-height:1.5;
+  }
+  .alert-banner code{background:var(--panel);padding:2px 4px;border-radius:3px;color:var(--text);font-size:10.5px;}
+
+  /* Metrics */
+  .metric-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+  .metric{background:var(--panel-2);border:1.5px dashed var(--border-soft);border-radius:3px;padding:9px 11px;}
+  .metric .k{font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-faint);}
+  .metric .v{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;margin-top:2px;color:var(--text);}
+  .metric .v.gold{color:var(--gold);}
+  .metric .v.safe{color:var(--safe);}
+  .metric .v.alert{color:var(--alert);}
+
+  /* Comparison */
+  .compare-row{margin-bottom:11px;}
+  .compare-top{display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px;}
+  .compare-top .name{color:var(--text);font-weight:700;}
+  .compare-top .val{color:var(--text-dim);font-variant-numeric:tabular-nums;}
+  .bar-track{height:8px;background:var(--panel-2);border-radius:3px;overflow:hidden;border:1.5px dashed var(--border-soft);}
+  .bar-fill{height:100%;border-radius:2px;transition:width .7s cubic-bezier(.2,.8,.2,1);}
+  .empty-note{color:var(--text-faint);font-size:11px;line-height:1.6;}
+
+  /* Incident Log */
+  #log{height:175px;overflow-y:auto;font-size:11px;line-height:1.7;color:var(--text-dim);padding:10px 14px;background:var(--panel-2);}
+  #log .t{color:var(--text-faint);}
+  #log .tag-alert{color:var(--alert);}
+  #log .tag-safe{color:var(--safe);}
+  #log .tag-dvr{color:var(--dvrtsp);font-weight:700;}
+  #log::-webkit-scrollbar{width:7px;}
+  #log::-webkit-scrollbar-thumb{background:var(--border-soft);border-radius:4px;}
+
+  /* Floating Node Hover Tooltip */
+  #nodeTooltip{
+    position:fixed;display:none;z-index:999;pointer-events:none;
+    background:var(--panel);border:2px solid var(--border);border-radius:4px;
+    padding:10px 12px;box-shadow:4px 4px 0 rgba(42,36,32,.18);font-size:11px;line-height:1.45;
+    min-width:230px;max-width:310px;transform:translate(12px, 12px);
+  }
+  #nodeTooltip .tt-title{font-weight:800;color:var(--dvrtsp);font-size:12px;border-bottom:1px dashed var(--border-soft);padding-bottom:5px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;}
+  #nodeTooltip .tt-badge{font-size:9.5px;padding:2px 6px;border-radius:3px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;}
+  #nodeTooltip .tt-badge.deg{background:#F2DACB;color:var(--alert);border:1px solid var(--alert);}
+  #nodeTooltip .tt-badge.hlth{background:#E1EBE3;color:var(--safe);border:1px solid var(--safe-dim);}
+  #nodeTooltip .tt-row{display:flex;justify-content:space-between;gap:8px;margin-bottom:3px;}
+  #nodeTooltip .tt-lbl{color:var(--text-faint);text-transform:uppercase;font-size:9.5px;}
+  #nodeTooltip .tt-val{font-weight:600;color:var(--text);}
+  #nodeTooltip .tt-section{margin-top:6px;padding-top:5px;border-top:1px dashed var(--border-soft);}
+
+  /* ---------- Recovery Summary Panel ---------- */
+  .summary-narrative{
+    background:var(--panel-2);border:1.5px solid var(--border-soft);border-left:4px solid var(--dvrtsp);
+    border-radius:4px;padding:12px 14px;margin-bottom:14px;font-size:11.5px;line-height:1.6;color:var(--text);font-weight:500;
+  }
+  .summary-metric-grid{
+    display:grid;grid-template-columns:repeat(4, 1fr);gap:8px;margin-bottom:14px;
+  }
+  @media (max-width:800px){.summary-metric-grid{grid-template-columns:repeat(2, 1fr);}}
+  .summary-bars-container{
+    display:flex;flex-direction:column;gap:10px;background:var(--panel-2);border:1.5px dashed var(--border-soft);
+    border-radius:4px;padding:12px 14px;margin-bottom:14px;
+  }
+  .summary-bar-block .bar-header{display:flex;justify-content:space-between;font-size:10.5px;margin-bottom:4px;font-weight:700;}
+  .summary-bar-block .bar-label{color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em;font-size:9.5px;}
+  .summary-bar-block .bar-val{color:var(--text);font-variant-numeric:tabular-nums;}
+  .summary-table-section{margin-top:10px;}
+  .summary-table-title{font-size:10px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--text-faint);margin-bottom:8px;}
+  .table-responsive{overflow-x:auto;}
+  .summary-table{width:100%;border-collapse:collapse;font-size:11px;text-align:left;background:var(--panel-2);border:1.5px solid var(--border-soft);border-radius:4px;}
+  .summary-table th{padding:7px 10px;background:var(--panel);border-bottom:1.5px solid var(--border-soft);font-size:9.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--text-dim);}
+  .summary-table td{padding:8px 10px;border-bottom:1px dashed var(--border-soft);color:var(--text);font-variant-numeric:tabular-nums;}
+  .summary-table tr:last-child td{border-bottom:none;}
+  .summary-table tr.best-row{background:#E2EDE5;font-weight:700;}
+  .summary-table tr.best-row td:first-child::before{content:"★ ";color:var(--gold);}
+  .empty-table-cell{text-align:center;color:var(--text-faint);padding:16px !important;font-style:italic;}
+
+  footer{margin-top:20px;font-size:10.5px;color:var(--text-faint);text-align:center;letter-spacing:.03em;}
+  footer::before,footer::after{content:"✦";margin:0 8px;color:var(--gold);}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div>
+      <div class="brand-eyebrow">Design &amp; Analysis of Algorithms — Full-Stack Prototype</div>
+      <div class="brand-title">DVR–TSP <span class="sub">a field guide to dynamic recoverable-value routing</span></div>
+    </div>
+    <div class="header-right">
+      <div class="status-block">
+        <div class="status-label">Backend</div>
+        <div id="apiPill" class="status-pill offline"><span class="status-dot"></span><span id="apiStatusText">CONNECTING…</span></div>
+      </div>
+      <div class="status-block">
+        <div class="status-label">Recovery Window</div>
+        <div class="clock"><span id="clockVal">00.0</span><span class="unit">/ <span id="clockMax">55</span> min</span></div>
+      </div>
+      <div class="status-block">
+        <div class="status-label">Incident Status</div>
+        <div id="statusPill" class="status-pill stable"><span class="status-dot"></span><span id="statusText">STABLE</span></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- MODE SELECTOR & TOPOLOGY DISCLOSURE -->
+  <div class="mode-bar">
+    <div class="mode-segmented">
+      <button id="modeSyntheticBtn" class="mode-btn active" title="Run synthetic random clusters">Synthetic Mode</button>
+      <button id="modeRealBtn" class="mode-btn" title="Run real Backblaze Drive Stats telemetry">Real Data Mode (Backblaze)</button>
+    </div>
+    <div id="topologyBadge" class="topology-badge">
+      <span class="badge-icon">⚠</span>
+      <span>Topology: <strong>Modeled</strong> (coordinates and network are synthetic; drive telemetry is real)</span>
+    </div>
+  </div>
+
+  <div class="grid">
+
+    <!-- LEFT: graph + recovery summary -->
+    <div style="display:flex;flex-direction:column;gap:0;">
+      <div class="panel">
+        <div class="panel-head">
+          <h2 id="graphTitle">Distributed Storage Cluster</h2>
+          <span id="nodeCount" style="font-size:11px;color:var(--text-faint);">— nodes · 1 hub</span>
+        </div>
+        <div id="graphContainer">
+          <svg id="graphSvg" viewBox="0 0 900 620" xmlns="http://www.w3.org/2000/svg"></svg>
+        </div>
+        <div class="legend">
+          <span class="legend-item"><span class="legend-swatch" style="background:var(--dvrtsp)"></span>Rescue hub</span>
+          <span class="legend-item"><span class="legend-swatch" style="background:var(--gold)"></span>Recoverable data (idle)</span>
+          <span class="legend-item"><span class="legend-swatch" style="background:var(--gold);opacity:.4"></span>Decaying (hatch fills in)</span>
+          <span class="legend-item"><span class="legend-swatch" style="background:var(--safe)"></span>Recovered</span>
+          <span class="legend-item"><span class="legend-swatch" style="background:transparent;border:1.5px dashed var(--text-faint)"></span>Lost</span>
+          <span class="legend-item"><span style="width:14px;height:1px;background:var(--text-faint);display:inline-block;"></span>Routing graph (kNN)</span>
+        </div>
+      </div>
+
+      <!-- Recovery Summary Panel -->
+      <div class="panel" id="recoverySummaryPanel">
+        <div class="panel-head">
+          <h2>Emergency Recovery Summary</h2>
+          <span id="summarySelectedAlgo" style="font-size:11px;font-weight:700;color:var(--dvrtsp);">DVR–TSP</span>
+        </div>
+        <div class="panel-body">
+          <!-- Plain-English Narrative Summary Text -->
+          <div id="recoverySummaryNarrative" class="summary-narrative">
+            Generate or select a scenario, then execute a recovery strategy to calculate emergency data recovery and time utilization metrics.
+          </div>
+
+          <!-- Key Metrics Grid -->
+          <div class="summary-metric-grid">
+            <div class="metric"><div class="k">Data Available</div><div class="v gold" id="sumDataAvail">—</div></div>
+            <div class="metric"><div class="k">Data Recovered</div><div class="v safe" id="sumDataRec">—</div></div>
+            <div class="metric"><div class="k">Lost to Decay</div><div class="v alert" id="sumLostDecay">—</div></div>
+            <div class="metric"><div class="k">Lost Unvisited</div><div class="v" id="sumLostUnvisited" style="color:var(--text-faint);">—</div></div>
+            <div class="metric"><div class="k">Recovery Rate</div><div class="v gold" id="sumRecPct">—</div></div>
+            <div class="metric"><div class="k">Time Taken / Budget</div><div class="v" id="sumTimeTaken">—</div></div>
+            <div class="metric"><div class="k">Time Remaining</div><div class="v" id="sumTimeRem">—</div></div>
+            <div class="metric"><div class="k">Nodes Visited</div><div class="v safe" id="sumNodesVisited">—</div></div>
+          </div>
+
+          <!-- Progress Bars -->
+          <div class="summary-bars-container">
+            <div class="summary-bar-block">
+              <div class="bar-header">
+                <span class="bar-label">Data Recovery Progress</span>
+                <span class="bar-val" id="sumBarRecVal">0.0%</span>
+              </div>
+              <div class="bar-track">
+                <div id="sumBarRecFill" class="bar-fill" style="width:0%;background:var(--safe);"></div>
+              </div>
+            </div>
+
+            <div class="summary-bar-block">
+              <div class="bar-header">
+                <span class="bar-label">Time Budget Utilization</span>
+                <span class="bar-val" id="sumBarTimeVal">0.0%</span>
+              </div>
+              <div class="bar-track">
+                <div id="sumBarTimeFill" class="bar-fill" style="width:0%;background:var(--dvrtsp);"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Cross-Algorithm Comparison Table -->
+          <div class="summary-table-section">
+            <div class="summary-table-title">Cross-Algorithm Scenario Summary (Database Record)</div>
+            <div class="table-responsive">
+              <table id="recoveryComparisonTable" class="summary-table">
+                <thead>
+                  <tr>
+                    <th>Algorithm</th>
+                    <th>Data Recovered</th>
+                    <th>Recovery %</th>
+                    <th>Time Taken</th>
+                    <th>Nodes</th>
+                    <th>Efficiency (data/min)</th>
+                  </tr>
+                </thead>
+                <tbody id="recoveryTableBody">
+                  <tr>
+                    <td colspan="6" class="empty-table-cell">No algorithm runs recorded yet.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: controls + metrics -->
+    <div style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- Scenario Configuration Panel -->
+      <div class="panel">
+        <div class="panel-head">
+          <h2 id="configPanelTitle">Scenario Configuration</h2>
+          <span id="scenarioSourceBadge" style="font-size:10px;text-transform:uppercase;color:var(--text-faint);font-weight:700;">Synthetic</span>
+        </div>
+        <div class="panel-body">
+
+          <!-- Synthetic Mode Controls -->
+          <div id="syntheticControls">
+            <div class="field">
+              <label>Cluster Size (Nodes)</label>
+              <select id="synthClusterSize">
+                <option value="5">5 storage nodes (rapid)</option>
+                <option value="7">7 storage nodes</option>
+                <option value="9" selected>9 storage nodes (standard)</option>
+                <option value="12">12 storage nodes</option>
+                <option value="15">15 storage nodes (extended)</option>
+              </select>
+            </div>
+            <div class="btn-row">
+              <button id="btnNewSynthScenario" class="btn-ghost">↻ Generate Scenario</button>
+            </div>
+          </div>
+
+          <!-- Real Data Mode Controls -->
+          <div id="realControls" style="display:none;">
+
+            <!-- Friendly Error Banner if Real Data Missing -->
+            <div id="dataMissingBanner" class="alert-banner" style="display:none;">
+              <strong>⚠ Backblaze dataset not found:</strong><br>
+              Place daily telemetry CSVs in: <code>backend/data/backblaze/</code>.<br>
+              See instructions in <code>README.md</code> to download real data.
+            </div>
+
+            <div class="field-row">
+              <div class="field">
+                <label>Cluster Size</label>
+                <select id="realClusterSize">
+                  <option value="5">5 drives</option>
+                  <option value="8">8 drives</option>
+                  <option value="9" selected>9 drives</option>
+                  <option value="10">10 drives</option>
+                  <option value="12">12 drives</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>Modeled Topology</label>
+                <select id="realTopology">
+                  <option value="random_geometric" selected>Random Geometric</option>
+                  <option value="ring">Ring Cluster</option>
+                  <option value="star">Star / Backbone</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="field">
+              <label>Select Real Backblaze Incident</label>
+              <select id="realIncidentSelect">
+                <option value="">Scanning incidents…</option>
+              </select>
+            </div>
+
+            <div class="btn-row" style="margin-bottom:6px;">
+              <button id="btnLoadRealIncident" class="btn-secondary">Load Real Incident</button>
+            </div>
+
+            <!-- Multi-Day Replay Box -->
+            <div id="replayBox" class="replay-box">
+              <div class="replay-header">
+                <span class="replay-title">Multi-Day Telemetry Replay</span>
+                <span id="replayStatusBadge" class="replay-status-pill">Day 1 of 2</span>
+              </div>
+              <div class="btn-row">
+                <button id="btnPlayReplay" class="btn-ghost" style="flex:1;">▶ Play</button>
+                <button id="btnNextDay" class="btn-ghost" style="flex:1;">⏭ Next Day</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Incident Execution Console -->
+      <div class="panel">
+        <div class="panel-head"><h2>Incident Console</h2></div>
+        <div class="panel-body">
+          <div class="field">
+            <label>Recovery Strategy</label>
+            <select id="algoSelect">
+              <option value="dvrtsp">DVR–TSP (value + corruption + time aware)</option>
+              <option value="nn">Nearest Neighbor (classic TSP)</option>
+              <option value="dijkstra">Dijkstra (shortest-path order)</option>
+              <option value="astar">A* (heuristic-guided order)</option>
+              <option value="bfs">BFS (hop-count order)</option>
+            </select>
+          </div>
+          <div class="btn-row" style="margin-bottom:8px;">
+            <button id="btnEmergency" class="btn-alert" disabled>⚠ Trigger Emergency</button>
+          </div>
+          <div class="btn-row" style="margin-bottom:8px;">
+            <button id="btnRun" class="btn-primary" disabled>▶ Run Recovery</button>
+          </div>
+          <div class="btn-row">
+            <button id="btnReset" class="btn-ghost">↻ Reset Run</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Run Metrics -->
+      <div class="panel">
+        <div class="panel-head"><h2>Run Metrics</h2><span id="runAlgoLabel" style="font-size:11px;color:var(--text-faint);">—</span></div>
+        <div class="panel-body">
+          <div class="metric-grid">
+            <div class="metric"><div class="k">Value Recovered</div><div class="v gold" id="mValue">—</div></div>
+            <div class="metric"><div class="k">Time Used</div><div class="v" id="mTime">—</div></div>
+            <div class="metric"><div class="k">Nodes Recovered</div><div class="v safe" id="mNodes">—</div></div>
+            <div class="metric"><div class="k">Efficiency (val/min)</div><div class="v" id="mEff">—</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Algorithm Comparison -->
+      <div class="panel">
+        <div class="panel-head"><h2>Algorithm Comparison</h2><span style="font-size:10px;color:var(--text-faint);">from database</span></div>
+        <div class="panel-body" id="compareBody">
+          <div class="empty-note">Trigger the emergency, then run one or more strategies to compare recoverable value under the same decay conditions. Each baseline is sketched in its own color; DVR–TSP is inked in bold once dispatched. Every run is persisted server-side.</div>
+        </div>
+      </div>
+
+      <!-- Incident Log -->
+      <div class="panel">
+        <div class="panel-head"><h2>Incident Log</h2></div>
+        <div id="log"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <footer>DVR–TSP prototype · FastAPI + SQLite backend with Backblaze Drive Stats real-data engine · Sathyabama IoST, DAA review project</footer>
+</div>
+
+<!-- Floating Node Inspection Tooltip -->
+<div id="nodeTooltip">
+  <div class="tt-title">
+    <span id="ttNodeName">Vault N1</span>
+    <span id="ttStatusBadge" class="tt-badge hlth">NORMAL</span>
+  </div>
+  <div id="ttRealSection" style="display:none;">
+    <div class="tt-row"><span class="tt-lbl">Serial:</span><span class="tt-val" id="ttSerial">—</span></div>
+    <div class="tt-row"><span class="tt-lbl">Model:</span><span class="tt-val" id="ttModel">—</span></div>
+    <div class="tt-row"><span class="tt-lbl">Capacity:</span><span class="tt-val" id="ttCap">—</span></div>
+    <div class="tt-row"><span class="tt-lbl">SMART Risk:</span><span class="tt-val" id="ttRisk">—</span></div>
+    <div class="tt-row"><span class="tt-lbl">Sectors Err:</span><span class="tt-val" id="ttSectors">—</span></div>
+  </div>
+  <div class="tt-section">
+    <div class="tt-row"><span class="tt-lbl">Initial Value (V₀):</span><span class="tt-val" id="ttVal0">—</span></div>
+    <div class="tt-row"><span class="tt-lbl">Current Value:</span><span class="tt-val" id="ttValCur" style="color:var(--gold);font-weight:700;">—</span></div>
+    <div class="tt-row"><span class="tt-lbl">Corruption (k):</span><span class="tt-val" id="ttK">—</span></div>
+    <div class="tt-row"><span class="tt-lbl">Recovery Time:</span><span class="tt-val" id="ttRecTime">—</span></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const SVGNS = "http://www.w3.org/2000/svg";
+
+  // Backend connection
+  const API_BASE = (window.DVRTSP_API_BASE || "http://127.0.0.1:8000") + "/api";
+
+  const T_MAX = 55;      // recovery window in minutes
+  const ALGO_COLORS = { dvrtsp:"var(--dvrtsp)", nn:"#A8763F", dijkstra:"#5C7A9E", astar:"#5C9E6F", bfs:"#8C816C" };
+  const ALGO_NAMES  = { dvrtsp:"DVR–TSP", nn:"Nearest Neighbor", dijkstra:"Dijkstra", astar:"A*", bfs:"BFS" };
+
+  let currentMode = "synthetic"; // "synthetic" | "real"
+  let HUB = {x: 78, y: 320, id: "hub"};
+  let nodes = [], sparseEdges = [], emergencyOn = false, running = false;
+  let clockRAF = null, clockStart = 0, clockElapsed = 0;
+  let scenarioId = null;
+  let scenarioMeta = null;
+  let results = {}; // algoKey -> {totalValue, totalTime, count}
+
+  // Real mode state
+  let availableIncidents = [];
+  let currentIncidentIndex = 0;
+  let replayPlaying = false;
+  let replayTimer = null;
+
+  // Recovery Summary State & Helpers
+  let totalDataAvailable = 0;
+  let liveRecoveredData = 0;
+
+  function formatBytes(b){
+    if(b === null || b === undefined || isNaN(b)) return '—';
+    if(currentMode !== 'real') return Number(b).toFixed(1) + ' units';
+    if(b >= 1e12) return (b / 1e12).toFixed(2) + ' TB';
+    if(b >= 1e9)  return (b / 1e9).toFixed(2) + ' GB';
+    if(b >= 1e6)  return (b / 1e6).toFixed(2) + ' MB';
+    return Math.round(b) + ' B';
+  }
+
+  function formatMinutes(m){
+    if(m === null || m === undefined || isNaN(m)) return '—';
+    return Number(m).toFixed(1) + ' min';
+  }
+
+  function updateRecoverySummaryPanel(m, summaryData, algoKey){
+    if(algoKey){
+      document.getElementById('summarySelectedAlgo').textContent = ALGO_NAMES[algoKey] || algoKey;
+    }
+    if(summaryData && (summaryData.summary_text || summaryData.overall_summary)){
+      document.getElementById('recoverySummaryNarrative').textContent = summaryData.summary_text || summaryData.overall_summary;
+    } else if(m && m.summary_text){
+      document.getElementById('recoverySummaryNarrative').textContent = m.summary_text;
+    }
+
+    if(m){
+      const avail = m.total_data_available_formatted || formatBytes(m.total_data_available != null ? m.total_data_available : m.total_value_available);
+      const rec = m.data_recovered_formatted || formatBytes(m.data_recovered != null ? m.data_recovered : m.value_recovered);
+      const lostDecay = formatBytes(m.lost_to_decay);
+      const lostUnvisited = formatBytes(m.lost_unvisited);
+      const recPct = Number(m.recovery_percentage || 0).toFixed(1) + '%';
+      const timeTaken = `${formatMinutes(m.time_taken)} / ${formatMinutes(m.time_budget || T_MAX)}`;
+      const timeRem = formatMinutes(m.time_remaining);
+      const nodesStr = `${m.nodes_visited || 0} / ${m.nodes_total || nodes.length}`;
+
+      document.getElementById('sumDataAvail').textContent = avail;
+      document.getElementById('sumDataRec').textContent = rec;
+      document.getElementById('sumLostDecay').textContent = lostDecay;
+      document.getElementById('sumLostUnvisited').textContent = lostUnvisited;
+      document.getElementById('sumRecPct').textContent = recPct;
+      document.getElementById('sumTimeTaken').textContent = timeTaken;
+      document.getElementById('sumTimeRem').textContent = timeRem;
+      document.getElementById('sumNodesVisited').textContent = nodesStr;
+
+      const pct = Math.min(100, Math.max(0, Number(m.recovery_percentage || 0)));
+      document.getElementById('sumBarRecVal').textContent = pct.toFixed(1) + '%';
+      document.getElementById('sumBarRecFill').style.width = pct.toFixed(1) + '%';
+
+      const timeUtil = Math.min(100, Math.max(0, Number(m.time_utilization_percentage || ((m.time_taken || 0) / (m.time_budget || T_MAX) * 100))));
+      document.getElementById('sumBarTimeVal').textContent = `${timeUtil.toFixed(1)}% (${formatMinutes(m.time_taken)})`;
+      document.getElementById('sumBarTimeFill').style.width = timeUtil.toFixed(1) + '%';
+    }
+
+    const tableData = (summaryData && (summaryData.comparison_table || summaryData.algorithms)) || null;
+    const bestItem = (summaryData && (summaryData.best_by_data_recovered || summaryData.best_algorithm_by_data)) || null;
+    if(tableData){
+      renderRecoveryTable(tableData, bestItem);
+    }
+  }
+
+  function renderRecoveryTable(table, bestItem){
+    const tbody = document.getElementById('recoveryTableBody');
+    if(!table || table.length === 0){
+      tbody.innerHTML = '<tr><td colspan="6" class="empty-table-cell">No algorithm runs recorded yet.</td></tr>';
+      return;
+    }
+
+    let bestAlgo = null;
+    if(typeof bestItem === 'string'){
+      bestAlgo = bestItem;
+    } else if(bestItem && bestItem.algorithm){
+      bestAlgo = bestItem.algorithm;
+    }
+
+    tbody.innerHTML = '';
+    table.forEach(r => {
+      const isBest = (bestAlgo && (r.algorithm === bestAlgo || r.algorithm_name === bestAlgo));
+      const tr = document.createElement('tr');
+      if(isBest) tr.className = 'best-row';
+
+      const recFmt = r.data_recovered_formatted || formatBytes(r.data_recovered != null ? r.data_recovered : r.value_recovered);
+      const timeFmt = `${formatMinutes(r.time_taken)} (${Number(r.time_utilization_percentage || 0).toFixed(0)}%)`;
+      const effFmt = Number(r.data_per_minute || r.efficiency_data_per_min || 0).toFixed(2);
+
+      tr.innerHTML = `
+        <td><strong>${r.algorithm_name || ALGO_NAMES[r.algorithm] || r.algorithm}</strong>${isBest ? ' <span style="font-size:9.5px;color:var(--safe);background:#FFF;padding:1px 5px;border-radius:3px;border:1px solid var(--border-soft);margin-left:4px;">BEST</span>' : ''}</td>
+        <td style="font-weight:600;color:var(--safe);">${recFmt}</td>
+        <td><strong>${Number(r.recovery_percentage || 0).toFixed(1)}%</strong></td>
+        <td>${timeFmt}</td>
+        <td>${r.nodes_visited} / ${r.nodes_total}</td>
+        <td style="color:var(--text-dim);">${effFmt}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  async function fetchScenarioSummary(selectedAlgo){
+    if(!scenarioId) return;
+    try{
+      const res = await fetch(`${API_BASE}/scenarios/${scenarioId}/summary`);
+      if(!res.ok) return;
+      const data = await res.json();
+      let matchedMetrics = null;
+      if(selectedAlgo && data.comparison_table){
+        matchedMetrics = data.comparison_table.find(c => c.algorithm === selectedAlgo);
+      }
+      if(!matchedMetrics && data.best_by_data_recovered){
+        matchedMetrics = data.best_by_data_recovered;
+      }
+      updateRecoverySummaryPanel(matchedMetrics, data, selectedAlgo);
+    } catch(err){}
+  }
+
+  const svg = document.getElementById('graphSvg');
+  const logEl = document.getElementById('log');
+  const tooltip = document.getElementById('nodeTooltip');
+
+  function log(html, cls){
+    const line = document.createElement('div');
+    const t = (clockElapsed).toFixed(1).padStart(4,'0');
+    line.innerHTML = `<span class="t">[t=${t}]</span> ${html}`;
+    if(cls) line.classList.add(cls);
+    logEl.appendChild(line);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function setApiStatus(ok){
+    const pill = document.getElementById('apiPill');
+    const text = document.getElementById('apiStatusText');
+    pill.classList.remove('online','offline');
+    pill.classList.add(ok ? 'online' : 'offline');
+    text.textContent = ok ? 'CONNECTED' : 'OFFLINE';
+  }
+
+  function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
+
+  // ---------- Mode Switching ----------
+  function setMode(mode){
+    currentMode = mode;
+    const synthBtn = document.getElementById('modeSyntheticBtn');
+    const realBtn = document.getElementById('modeRealBtn');
+    const synthControls = document.getElementById('syntheticControls');
+    const realControls = document.getElementById('realControls');
+    const topBadge = document.getElementById('topologyBadge');
+    const sourceBadge = document.getElementById('scenarioSourceBadge');
+
+    if(mode === 'real'){
+      synthBtn.classList.remove('active');
+      realBtn.classList.add('active');
+      synthControls.style.display = 'none';
+      realControls.style.display = 'block';
+      topBadge.style.display = 'inline-flex';
+      sourceBadge.textContent = 'Backblaze';
+      sourceBadge.style.color = 'var(--gold)';
+      document.getElementById('graphTitle').textContent = 'Backblaze Storage Cluster (Modeled Topology)';
+      resetRunUI();
+      loadRealIncidentsList();
+    } else {
+      realBtn.classList.remove('active');
+      synthBtn.classList.add('active');
+      realControls.style.display = 'none';
+      synthControls.style.display = 'block';
+      topBadge.style.display = 'none';
+      sourceBadge.textContent = 'Synthetic';
+      sourceBadge.style.color = 'var(--text-faint)';
+      document.getElementById('graphTitle').textContent = 'Distributed Storage Cluster';
+      const banner = document.getElementById('dataMissingBanner');
+      if(banner) banner.style.display = 'none';
+      resetRunUI();
+      fetchSyntheticScenario();
+    }
+  }
+
+  // ---------- Synthetic Scenario ----------
+  async function fetchSyntheticScenario(){
+    log('Generating synthetic scenario from backend…');
+    const n = parseInt(document.getElementById('synthClusterSize').value, 10) || 9;
+    try{
+      const res = await fetch(`${API_BASE}/scenarios`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({n_nodes: n})
+      });
+      if(!res.ok) throw new Error(`Server responded ${res.status}`);
+      const data = await res.json();
+      applyScenarioData(data);
+      setApiStatus(true);
+      log(`Synthetic Scenario <b>#${scenarioId}</b> loaded — ${nodes.length} nodes online.`);
+    } catch(err){
+      handleBackendError(err);
+    }
+  }
+
+  // ---------- Real Data Mode Incidents ----------
+  async function loadRealIncidentsList(){
+    const clusterSize = parseInt(document.getElementById('realClusterSize').value, 10) || 9;
+    const select = document.getElementById('realIncidentSelect');
+    const banner = document.getElementById('dataMissingBanner');
+    const replayBox = document.getElementById('replayBox');
+    select.innerHTML = '<option value="">Querying Backblaze telemetry…</option>';
+
+    try{
+      const res = await fetch(`${API_BASE}/real/incidents?cluster_size=${clusterSize}&min_degraded=1&seed=42`);
+      if(!res.ok) throw new Error(`Status ${res.status}`);
+      availableIncidents = await res.json();
+
+      if(!availableIncidents || availableIncidents.length === 0){
+        select.innerHTML = '<option value="">No incidents found in dataset</option>';
+        banner.style.display = 'block';
+        replayBox.style.display = 'none';
+        log('<span class="tag-alert">⚠ No Backblaze incidents found.</span> Verify CSV files exist in backend/data/backblaze/.', 'tag-alert');
+        return;
+      }
+
+      banner.style.display = 'none';
+      replayBox.style.display = 'block';
+      select.innerHTML = '';
+      availableIncidents.forEach((inc, idx)=>{
+        const opt = document.createElement('option');
+        opt.value = inc.incident_id;
+        opt.textContent = `${inc.incident_id} (${inc.date} · ${inc.degraded_count} degraded drives)`;
+        select.appendChild(opt);
+      });
+
+      currentIncidentIndex = 0;
+      updateReplayBadge();
+      loadRealScenario(availableIncidents[0].incident_id);
+    } catch(err){
+      banner.style.display = 'none';
+      handleBackendError(err);
+    }
+  }
+
+  async function loadRealScenario(incidentId){
+    const topology = document.getElementById('realTopology').value || 'random_geometric';
+    const clusterSize = parseInt(document.getElementById('realClusterSize').value, 10) || 9;
+    log(`Loading real Backblaze incident <b>${incidentId}</b> (${topology} topology)…`);
+
+    try{
+      const res = await fetch(`${API_BASE}/real/scenarios`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          incident_id: incidentId,
+          topology: topology,
+          cluster_size: clusterSize,
+          seed: 42
+        })
+      });
+      if(!res.ok){
+        const body = await res.text();
+        throw new Error(`Server responded ${res.status}: ${body}`);
+      }
+      const data = await res.json();
+      applyScenarioData(data);
+      setApiStatus(true);
+      log(`Real Incident Scenario <b>#${scenarioId}</b> loaded (${nodes.length} drives with Backblaze SMART telemetry).`);
+    } catch(err){
+      handleBackendError(err);
+    }
+  }
+
+  function applyScenarioData(data){
+    if(clockRAF) cancelAnimationFrame(clockRAF);
+    emergencyOn = false; running = false; clockElapsed = 0;
+    document.getElementById('clockVal').textContent = '00.0';
+    const pill = document.getElementById('statusPill');
+    pill.classList.remove('emergency'); pill.classList.add('stable');
+    document.getElementById('statusText').textContent = 'STABLE';
+
+    scenarioId = data.scenario_id;
+    scenarioMeta = data.meta || {};
+    HUB = Object.assign({id:'hub'}, data.hub);
+
+    // Map drive metadata onto node objects if present
+    const driveMap = {};
+    if(scenarioMeta && scenarioMeta.drives){
+      scenarioMeta.drives.forEach(d => { driveMap[d.node_id] = d; });
+    }
+
+    nodes = data.nodes.map(n => {
+      const drive = driveMap[n.id] || null;
+      return Object.assign({status:'idle', drive: drive}, n);
+    });
+
+    sparseEdges = data.edges;
+    results = {};
+
+    document.getElementById('nodeCount').textContent = `${nodes.length} nodes · 1 hub`;
+    render();
+    resetRunUI();
+
+    // Compute totalDataAvailable across nodes
+    totalDataAvailable = 0;
+    if(data.source === 'backblaze' || currentMode === 'real'){
+      nodes.forEach(n => {
+        const cap = (n.drive && n.drive.capacity_bytes) ? n.drive.capacity_bytes : (n.capacity_bytes || 4e12);
+        totalDataAvailable += cap * 0.70;
+      });
+    } else {
+      nodes.forEach(n => { totalDataAvailable += n.value; });
+    }
+
+    const availFmt = formatBytes(totalDataAvailable);
+    document.getElementById('sumDataAvail').textContent = availFmt;
+    document.getElementById('recoverySummaryNarrative').textContent =
+      `Scenario #${scenarioId} initialized with ${nodes.length} nodes and ${availFmt} total data available under time budget ${T_MAX} min. Run an algorithm to evaluate data recovery performance.`;
+
+    fetchScenarioSummary();
+
+    document.getElementById('btnEmergency').disabled = false;
+    document.getElementById('btnRun').disabled = true;
+  }
+
+  function handleBackendError(err){
+    setApiStatus(false);
+    document.getElementById('btnEmergency').disabled = true;
+    document.getElementById('btnRun').disabled = true;
+    log(`<span class="tag-alert">⚠ Cannot connect to backend</span> at ${API_BASE.replace('/api','')}: ${err.message}`, 'tag-alert');
+  }
+
+  // ---------- Replay Handling ----------
+  function updateReplayBadge(){
+    if(!availableIncidents.length) return;
+    const cur = availableIncidents[currentIncidentIndex];
+    document.getElementById('replayStatusBadge').textContent = `Day ${currentIncidentIndex + 1} of ${availableIncidents.length} (${cur ? cur.date : ''})`;
+  }
+
+  function stepNextIncident(){
+    if(!availableIncidents.length) return;
+    currentIncidentIndex = (currentIncidentIndex + 1) % availableIncidents.length;
+    document.getElementById('realIncidentSelect').selectedIndex = currentIncidentIndex;
+    updateReplayBadge();
+    loadRealScenario(availableIncidents[currentIncidentIndex].incident_id);
+  }
+
+  function togglePlayReplay(){
+    const btn = document.getElementById('btnPlayReplay');
+    if(replayPlaying){
+      replayPlaying = false;
+      clearInterval(replayTimer);
+      btn.textContent = '▶ Play';
+      btn.classList.remove('btn-primary');
+      btn.classList.add('btn-ghost');
+      log('Multi-day replay paused.');
+    } else {
+      replayPlaying = true;
+      btn.textContent = '⏸ Pause';
+      btn.classList.remove('btn-ghost');
+      btn.classList.add('btn-primary');
+      log('Multi-day replay started (auto-stepping days)…');
+      stepNextIncident();
+      replayTimer = setInterval(()=>{
+        stepNextIncident();
+      }, 4500);
+    }
+  }
+
+  // ---------- Server Execution & Historical Runs ----------
+  async function runOnServer(key){
+    const res = await fetch(`${API_BASE}/scenarios/${scenarioId}/run`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({algorithm:key})
+    });
+    if(!res.ok){
+      const body = await res.text();
+      throw new Error(`Server responded ${res.status}: ${body}`);
+    }
+    return res.json();
+  }
+
+  async function refreshRunsFromServer(){
+    try{
+      const res = await fetch(`${API_BASE}/scenarios/${scenarioId}/runs`);
+      if(!res.ok) return;
+      const list = await res.json();
+      const latestByAlgo = {};
+      list.forEach(r=>{
+        const prev = latestByAlgo[r.algorithm];
+        if(!prev || r.run_id > prev.run_id) latestByAlgo[r.algorithm] = r;
+      });
+      results = {};
+      Object.keys(latestByAlgo).forEach(k=>{
+        const r = latestByAlgo[k];
+        results[k] = { totalValue: r.totalValue, totalTime: r.totalTime, count: r.count, run_id: r.run_id };
+      });
+      renderComparison();
+    } catch(err){}
+  }
+
+  // ---------- SVG Rendering ----------
+  function clear(el){ while(el.firstChild) el.removeChild(el.firstChild); }
+
+  function render(){
+    clear(svg);
+    const defs = document.createElementNS(SVGNS,'defs');
+    defs.innerHTML = `
+      <pattern id="hatch" width="6" height="6" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+        <line x1="0" y1="0" x2="0" y2="6" stroke="var(--alert)" stroke-width="1.4"/>
+      </pattern>`;
+    svg.appendChild(defs);
+
+    // sparse routing graph
+    const gEdges = document.createElementNS(SVGNS,'g');
+    gEdges.setAttribute('id','edgesLayer');
+    const posMap = {hub: HUB};
+    nodes.forEach(n=> posMap[n.id]=n);
+    sparseEdges.forEach(e=>{
+      const a = posMap[e.a], b = posMap[e.b];
+      if(!a || !b) return;
+      const line = document.createElementNS(SVGNS,'line');
+      line.setAttribute('x1',a.x); line.setAttribute('y1',a.y);
+      line.setAttribute('x2',b.x); line.setAttribute('y2',b.y);
+      line.setAttribute('class','edge-sparse');
+      gEdges.appendChild(line);
+    });
+    svg.appendChild(gEdges);
+
+    // path layer
+    const gPath = document.createElementNS(SVGNS,'g');
+    gPath.setAttribute('id','pathLayer');
+    svg.appendChild(gPath);
+
+    // ---- hub: rescue beacon ----
+    const hubBase = document.createElementNS(SVGNS,'rect');
+    hubBase.setAttribute('x',HUB.x-17); hubBase.setAttribute('y',HUB.y+14);
+    hubBase.setAttribute('width',34); hubBase.setAttribute('height',9);
+    hubBase.setAttribute('rx',1.5);
+    hubBase.setAttribute('fill','var(--panel-2)');
+    hubBase.setAttribute('stroke','var(--dvrtsp)'); hubBase.setAttribute('stroke-width','2.2');
+    svg.appendChild(hubBase);
+
+    const hubTower = document.createElementNS(SVGNS,'polygon');
+    hubTower.setAttribute('points', `${HUB.x-6},${HUB.y-28} ${HUB.x+6},${HUB.y-28} ${HUB.x+14},${HUB.y+14} ${HUB.x-14},${HUB.y+14}`);
+    hubTower.setAttribute('fill','var(--panel-2)');
+    hubTower.setAttribute('stroke','var(--dvrtsp)'); hubTower.setAttribute('stroke-width','2.2');
+    svg.appendChild(hubTower);
+
+    const hubLamp = document.createElementNS(SVGNS,'circle');
+    hubLamp.setAttribute('cx',HUB.x); hubLamp.setAttribute('cy',HUB.y-32); hubLamp.setAttribute('r',7);
+    hubLamp.setAttribute('fill','var(--dvrtsp)');
+    hubLamp.setAttribute('stroke','var(--panel)'); hubLamp.setAttribute('stroke-width','1.5');
+    svg.appendChild(hubLamp);
+
+    [-60,-25,25,60].forEach(angle=>{
+      const rad = angle*Math.PI/180;
+      const x1 = HUB.x + Math.sin(rad)*10, y1 = HUB.y-32 - Math.cos(rad)*10;
+      const x2 = HUB.x + Math.sin(rad)*20, y2 = HUB.y-32 - Math.cos(rad)*20;
+      const ray = document.createElementNS(SVGNS,'line');
+      ray.setAttribute('x1',x1); ray.setAttribute('y1',y1);
+      ray.setAttribute('x2',x2); ray.setAttribute('y2',y2);
+      ray.setAttribute('stroke','var(--dvrtsp)'); ray.setAttribute('stroke-width','1.6');
+      ray.setAttribute('stroke-dasharray','2,2'); ray.setAttribute('opacity','0.6');
+      svg.appendChild(ray);
+    });
+
+    const hubLabel = document.createElementNS(SVGNS,'text');
+    hubLabel.setAttribute('x',HUB.x); hubLabel.setAttribute('y',HUB.y+38);
+    hubLabel.setAttribute('text-anchor','middle');
+    hubLabel.setAttribute('class','node-label');
+    hubLabel.textContent = 'RESCUE HUB';
+    svg.appendChild(hubLabel);
+
+    // ---- storage nodes: vault capsules with telemetry tooltips ----
+    const gNodes = document.createElementNS(SVGNS,'g');
+    gNodes.setAttribute('id','nodesLayer');
+
+    nodes.forEach(n=>{
+      const g = document.createElementNS(SVGNS,'g');
+      g.setAttribute('id','node-'+n.id);
+      g.setAttribute('class','node-group');
+
+      const r = 17;
+      const decayRing = document.createElementNS(SVGNS,'circle');
+      decayRing.setAttribute('cx',n.x); decayRing.setAttribute('cy',n.y); decayRing.setAttribute('r',r);
+      decayRing.setAttribute('fill','none');
+      decayRing.setAttribute('stroke','var(--alert)');
+      decayRing.setAttribute('stroke-width','2.5');
+      decayRing.setAttribute('stroke-dasharray', (2*Math.PI*r).toFixed(2));
+      decayRing.setAttribute('stroke-dashoffset','0');
+      decayRing.setAttribute('transform', `rotate(-90 ${n.x} ${n.y})`);
+      decayRing.setAttribute('id','ring-'+n.id);
+      decayRing.style.opacity = 0;
+      g.appendChild(decayRing);
+
+      const core = document.createElementNS(SVGNS,'circle');
+      core.setAttribute('cx',n.x); core.setAttribute('cy',n.y); core.setAttribute('r',12);
+      core.setAttribute('class','vault-core');
+      // In real mode, highlight degraded drives in subtle amber-rust tint
+      if(n.drive && n.drive.is_degraded){
+        core.setAttribute('fill','#E8A87C');
+      } else {
+        core.setAttribute('fill','var(--gold)');
+      }
+      core.setAttribute('stroke','var(--dvrtsp)'); core.setAttribute('stroke-width','2.2');
+      core.setAttribute('id','core-'+n.id);
+      g.appendChild(core);
+
+      const hatch = document.createElementNS(SVGNS,'circle');
+      hatch.setAttribute('cx',n.x); hatch.setAttribute('cy',n.y); hatch.setAttribute('r',12);
+      hatch.setAttribute('fill','url(#hatch)');
+      hatch.setAttribute('id','hatch-'+n.id);
+      hatch.style.opacity = 0;
+      hatch.style.pointerEvents = 'none';
+      g.appendChild(hatch);
+
+      // Node labels
+      const label = document.createElementNS(SVGNS,'text');
+      label.setAttribute('x',n.x); label.setAttribute('y',n.y+30);
+      label.setAttribute('text-anchor','middle');
+      label.setAttribute('class','node-label');
+      label.textContent = `${n.id} · k${n.corruption}`;
+      g.appendChild(label);
+
+      const valLabel = document.createElementNS(SVGNS,'text');
+      valLabel.setAttribute('x',n.x); valLabel.setAttribute('y',n.y+4);
+      valLabel.setAttribute('text-anchor','middle');
+      valLabel.setAttribute('class','node-value');
+      valLabel.setAttribute('fill','var(--dvrtsp)');
+      valLabel.setAttribute('id','vallabel-'+n.id);
+      valLabel.textContent = Math.round(n.value);
+      g.appendChild(valLabel);
+
+      // Tooltip event listeners
+      g.addEventListener('mouseenter', (e) => showNodeTooltip(e, n));
+      g.addEventListener('mousemove', (e) => positionTooltip(e));
+      g.addEventListener('mouseleave', () => hideNodeTooltip());
+
+      gNodes.appendChild(g);
+    });
+    svg.appendChild(gNodes);
+  }
+
+  // ---------- Node Tooltip Handlers ----------
+  function showNodeTooltip(e, node){
+    const d = node.drive;
+    document.getElementById('ttNodeName').textContent = `Vault ${node.id}`;
+
+    if(d){
+      document.getElementById('ttRealSection').style.display = 'block';
+      document.getElementById('ttSerial').textContent = d.serial_number || 'N/A';
+      document.getElementById('ttModel').textContent = d.model || 'N/A';
+      document.getElementById('ttCap').textContent = `${d.capacity_tb} TB`;
+      document.getElementById('ttRisk').textContent = `${d.risk_score} (w_risk)`;
+
+      const errors = `5:${Math.round(d.smart_5_raw)} | 187:${Math.round(d.smart_187_raw)} | 197:${Math.round(d.smart_197_raw)}`;
+      document.getElementById('ttSectors').textContent = errors;
+
+      const badge = document.getElementById('ttStatusBadge');
+      if(d.failure === 1){
+        badge.className = 'tt-badge deg';
+        badge.textContent = 'FAILED';
+      } else if(d.is_degraded){
+        badge.className = 'tt-badge deg';
+        badge.textContent = 'DEGRADED';
+      } else {
+        badge.className = 'tt-badge hlth';
+        badge.textContent = 'HEALTHY';
+      }
+    } else {
+      document.getElementById('ttRealSection').style.display = 'none';
+      const badge = document.getElementById('ttStatusBadge');
+      badge.className = 'tt-badge hlth';
+      badge.textContent = 'SYNTHETIC';
+    }
+
+    document.getElementById('ttVal0').textContent = `${node.value} units`;
+    const curVal = currentValue(node, clockElapsed);
+    document.getElementById('ttValCur').textContent = `${curVal.toFixed(1)} units`;
+    document.getElementById('ttK').textContent = node.corruption;
+    document.getElementById('ttRecTime').textContent = `${node.recoveryTime} min`;
+
+    positionTooltip(e);
+    tooltip.style.display = 'block';
+  }
+
+  function positionTooltip(e){
+    const pad = 14;
+    let x = e.clientX + pad;
+    let y = e.clientY + pad;
+    const rect = tooltip.getBoundingClientRect();
+    if(x + 320 > window.innerWidth) x = e.clientX - 320 - pad;
+    if(y + rect.height > window.innerHeight) y = e.clientY - rect.height - pad;
+    tooltip.style.left = `${Math.max(10, x)}px`;
+    tooltip.style.top = `${Math.max(10, y)}px`;
+  }
+
+  function hideNodeTooltip(){
+    tooltip.style.display = 'none';
+  }
+
+  // ---------- Decay & Clock Simulation ----------
+  function currentValue(n, t){
+    if(!emergencyOn) return n.value;
+    return n.value * Math.exp(-n.corruption * t);
+  }
+
+  function updateNodeVisuals(t){
+    nodes.forEach(n=>{
+      if(n.status === 'recovered') return;
+      const ring = document.getElementById('ring-'+n.id);
+      const core = document.getElementById('core-'+n.id);
+      const hatch = document.getElementById('hatch-'+n.id);
+      const label = document.getElementById('vallabel-'+n.id);
+      const v = currentValue(n, t);
+
+      if(emergencyOn && ring){
+        ring.style.opacity = 1;
+        const r = 17, circumference = 2*Math.PI*r;
+        const frac = Math.max(0, v/n.value);
+        ring.setAttribute('stroke-dashoffset', (circumference * (1-frac)).toFixed(2));
+        const heat = 1 - frac;
+        if(hatch) hatch.style.opacity = Math.min(0.85, heat*1.1);
+        ring.classList.toggle('ring-critical', frac < 0.22 && frac > 0.04);
+        if(frac < 0.06 && n.status !== 'lost'){
+          n.status = 'lost';
+          ring.style.opacity = 0;
+          if(hatch) hatch.style.opacity = 0;
+          if(core){
+            core.setAttribute('fill','none');
+            core.setAttribute('stroke','var(--text-faint)');
+            core.setAttribute('stroke-width','1.5');
+            core.setAttribute('stroke-dasharray','3,3');
+          }
+          if(label) label.style.opacity = 0.25;
+        }
+      }
+      if(label && n.status !== 'lost') label.textContent = Math.round(v);
+    });
+
+    if(tooltip.style.display === 'block'){
+      const curId = document.getElementById('ttNodeName').textContent.replace('Vault ','');
+      const targetNode = nodes.find(x=>x.id === curId);
+      if(targetNode){
+        document.getElementById('ttValCur').textContent = `${currentValue(targetNode, t).toFixed(1)} units`;
+      }
+    }
+  }
+
+  function startClock(){
+    clockStart = performance.now();
+    const REAL_SECONDS_FOR_FULL_WINDOW = 40;
+    function tick(now){
+      const elapsedReal = (now - clockStart)/1000;
+      clockElapsed = Math.min(T_MAX, (elapsedReal/REAL_SECONDS_FOR_FULL_WINDOW) * T_MAX);
+      document.getElementById('clockVal').textContent = clockElapsed.toFixed(1).padStart(4,'0');
+      updateNodeVisuals(clockElapsed);
+      if(clockElapsed < T_MAX){
+        clockRAF = requestAnimationFrame(tick);
+      } else {
+        log(`Recovery window closed. Data past this deadline is lost.`, 'tag-alert');
+      }
+    }
+    clockRAF = requestAnimationFrame(tick);
+  }
+
+  // ---------- Animate Algorithm Tour ----------
+  // ---------- Animate Algorithm Tour ----------
+  function animatePath(steps, color, algoKey, cb, runMetrics){
+    const nodeMap = {}; nodes.forEach(n=>nodeMap[n.id]=n);
+    const gPath = document.getElementById('pathLayer');
+    let cur = HUB;
+    let i = 0;
+    liveRecoveredData = 0;
+    document.getElementById('summarySelectedAlgo').textContent = ALGO_NAMES[algoKey] || algoKey;
+
+    function nextStep(){
+      if(i >= steps.length){ cb && cb(); return; }
+      const s = steps[i]; i++;
+      const n = nodeMap[s.id];
+      if(!n){ nextStep(); return; }
+      const line = document.createElementNS(SVGNS,'line');
+      line.setAttribute('x1',cur.x); line.setAttribute('y1',cur.y);
+      line.setAttribute('x2',cur.x); line.setAttribute('y2',cur.y);
+      line.setAttribute('stroke', color);
+      line.setAttribute('stroke-linecap','round');
+      if(algoKey==='dvrtsp'){
+        line.setAttribute('stroke-width', 3.2);
+        line.setAttribute('opacity', 1);
+      } else {
+        line.setAttribute('stroke-width', 1.8);
+        line.setAttribute('opacity', 0.8);
+        line.setAttribute('stroke-dasharray','2,4');
+      }
+      gPath.appendChild(line);
+
+      const dur = 400;
+      const t0 = performance.now();
+      function step(now){
+        const p = Math.min(1, (now-t0)/dur);
+        line.setAttribute('x2', cur.x + (n.x-cur.x)*p);
+        line.setAttribute('y2', cur.y + (n.y-cur.y)*p);
+        if(p<1){ requestAnimationFrame(step); }
+        else {
+          if(s.reached){
+            // Update live metrics
+            if((currentMode === 'real' || (scenarioMeta && scenarioMeta.source === 'backblaze')) && n.drive){
+              const fullBytes = (n.drive.capacity_bytes || 4e12) * 0.70;
+              liveRecoveredData += fullBytes * Math.exp(-n.corruption * s.arrival);
+            } else {
+              liveRecoveredData += s.value;
+            }
+            document.getElementById('sumDataRec').textContent = formatBytes(liveRecoveredData);
+            if(totalDataAvailable > 0){
+              const curPct = Math.min(100, (liveRecoveredData / totalDataAvailable) * 100);
+              document.getElementById('sumRecPct').textContent = curPct.toFixed(1) + '%';
+              document.getElementById('sumBarRecVal').textContent = curPct.toFixed(1) + '%';
+              document.getElementById('sumBarRecFill').style.width = curPct.toFixed(1) + '%';
+            }
+            const curTime = s.finish != null ? s.finish : s.arrival;
+            document.getElementById('sumTimeTaken').textContent = `${formatMinutes(curTime)} / ${formatMinutes(T_MAX)}`;
+            const timePct = Math.min(100, (curTime / T_MAX) * 100);
+            document.getElementById('sumBarTimeVal').textContent = `${timePct.toFixed(1)}% (${formatMinutes(curTime)})`;
+            document.getElementById('sumBarTimeFill').style.width = timePct.toFixed(1) + '%';
+            document.getElementById('sumTimeRem').textContent = formatMinutes(Math.max(0, T_MAX - curTime));
+
+            if(algoKey==='dvrtsp'){
+              n.status = 'recovered';
+              const core = document.getElementById('core-'+n.id);
+              const ring = document.getElementById('ring-'+n.id);
+              const hatch = document.getElementById('hatch-'+n.id);
+              const label = document.getElementById('vallabel-'+n.id);
+              if(core){ core.setAttribute('fill','var(--safe)'); core.setAttribute('stroke','var(--dvrtsp)'); }
+              if(ring) ring.style.opacity = 0;
+              if(hatch) hatch.style.opacity = 0;
+              if(label) label.style.opacity = 0;
+              const g = document.getElementById('node-'+n.id);
+              if(g && !document.getElementById('check-'+n.id)){
+                const check = document.createElementNS(SVGNS,'path');
+                check.setAttribute('id','check-'+n.id);
+                check.setAttribute('d', `M ${n.x-5} ${n.y} L ${n.x-1.5} ${n.y+4} L ${n.x+5.5} ${n.y-5}`);
+                check.setAttribute('fill','none');
+                check.setAttribute('stroke','var(--panel)');
+                check.setAttribute('stroke-width','2.2');
+                check.setAttribute('stroke-linecap','round');
+                check.setAttribute('stroke-linejoin','round');
+                g.appendChild(check);
+              }
+              log(`<span class="tag-dvr">DVR–TSP</span> → <b>${n.id}</b> recovered — value ${s.value.toFixed(1)} @ t=${s.arrival.toFixed(1)} min`, 'tag-safe');
+            } else {
+              log(`${ALGO_NAMES[algoKey]} → ${n.id} reached @ t=${s.arrival.toFixed(1)} (value ${s.value.toFixed(1)})`);
+            }
+          } else {
+            log(`${ALGO_NAMES[algoKey]} → ${s.id} unreachable within recovery window`, 'tag-alert');
+          }
+          cur = n;
+          nextStep();
+        }
+      }
+      requestAnimationFrame(step);
+    }
+    nextStep();
+  }
+
+  async function runAlgorithm(key){
+    if(running || !scenarioId) return;
+    running = true;
+    document.getElementById('btnRun').disabled = true;
+    document.getElementById('runAlgoLabel').textContent = ALGO_NAMES[key];
+    log(`Dispatching <b>${ALGO_NAMES[key]}</b> recovery plan…`);
+
+    try{
+      const data = await runOnServer(key);
+      log(`Server returned a ${data.order.length}-node plan (run <b>#${data.run_id}</b>) — ${data.totalValue.toFixed(1)} value units projected.`);
+
+      animatePath(data.steps, ALGO_COLORS[key], key, async ()=>{
+        document.getElementById('mValue').textContent = data.totalValue.toFixed(1);
+        document.getElementById('mTime').textContent = data.totalTime.toFixed(1)+' min';
+        document.getElementById('mNodes').textContent = data.count+' / '+nodes.length;
+        document.getElementById('mEff').textContent = (data.totalValue/Math.max(data.totalTime,0.01)).toFixed(2);
+
+        // Update recovery summary panel with returned run metrics and latest summary
+        if(data.metrics){
+          updateRecoverySummaryPanel(data.metrics, null, key);
+        }
+        await refreshRunsFromServer();
+        await fetchScenarioSummary(key);
+
+        running = false;
+        document.getElementById('btnRun').disabled = false;
+        log(`Run complete: ${ALGO_NAMES[key]} recovered ${data.totalValue.toFixed(1)} value units in ${data.totalTime.toFixed(1)} min. (persisted as run #${data.run_id})`);
+      }, data.metrics);
+    } catch(err){
+      log(`<span class="tag-alert">⚠ Execution error</span> — ${err.message}`, 'tag-alert');
+      running = false;
+      document.getElementById('btnRun').disabled = false;
+    }
+  }
+
+  function renderComparison(){
+    const body = document.getElementById('compareBody');
+    const keys = Object.keys(results);
+    if(!keys.length) return;
+    const maxVal = Math.max(...keys.map(k=>results[k].totalValue), 1);
+    clear(body);
+    keys.sort((a,b)=>results[b].totalValue - results[a].totalValue).forEach(k=>{
+      const r = results[k];
+      const row = document.createElement('div');
+      row.className = 'compare-row';
+      row.innerHTML = `
+        <div class="compare-top"><span class="name">${ALGO_NAMES[k]}</span><span class="val">${r.totalValue.toFixed(1)} val · ${r.totalTime.toFixed(1)} min</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:${(r.totalValue/maxVal*100).toFixed(1)}%; background:${ALGO_COLORS[k]};"></div></div>
+      `;
+      body.appendChild(row);
+    });
+  }
+
+  function resetRunUI(){
+    document.getElementById('mValue').textContent='—';
+    document.getElementById('mTime').textContent='—';
+    document.getElementById('mNodes').textContent='—';
+    document.getElementById('mEff').textContent='—';
+    document.getElementById('runAlgoLabel').textContent='—';
+    document.getElementById('compareBody').innerHTML = '<div class="empty-note">Trigger the emergency, then run one or more strategies to compare recoverable value under the same decay conditions. Each baseline is sketched in its own color; DVR\u2013TSP is inked in bold once dispatched. Every run is persisted server-side.</div>';
+    document.getElementById('sumDataRec').textContent = '—';
+    document.getElementById('sumLostDecay').textContent = '—';
+    document.getElementById('sumLostUnvisited').textContent = '—';
+    document.getElementById('sumRecPct').textContent = '—';
+    document.getElementById('sumTimeTaken').textContent = '—';
+    document.getElementById('sumTimeRem').textContent = '—';
+    document.getElementById('sumNodesVisited').textContent = '—';
+    document.getElementById('sumBarRecVal').textContent = '0.0%';
+    document.getElementById('sumBarRecFill').style.width = '0%';
+    document.getElementById('sumBarTimeVal').textContent = '0.0%';
+    document.getElementById('sumBarTimeFill').style.width = '0%';
+    document.getElementById('recoveryTableBody').innerHTML = '<tr><td colspan="6" class="empty-table-cell">No algorithm runs recorded yet.</td></tr>';
+  }
+
+  // ---------- Event Listeners ----------
+  document.getElementById('modeSyntheticBtn').addEventListener('click', ()=>setMode('synthetic'));
+  document.getElementById('modeRealBtn').addEventListener('click', ()=>setMode('real'));
+
+  document.getElementById('btnNewSynthScenario').addEventListener('click', fetchSyntheticScenario);
+
+  document.getElementById('realClusterSize').addEventListener('change', loadRealIncidentsList);
+  document.getElementById('realIncidentSelect').addEventListener('change', (e)=>{
+    const id = e.target.value;
+    if(id){
+      currentIncidentIndex = availableIncidents.findIndex(inc=>inc.incident_id === id);
+      updateReplayBadge();
+      loadRealScenario(id);
+    }
+  });
+  document.getElementById('btnLoadRealIncident').addEventListener('click', ()=>{
+    const id = document.getElementById('realIncidentSelect').value;
+    if(id) loadRealScenario(id);
+  });
+
+  document.getElementById('btnNextDay').addEventListener('click', stepNextIncident);
+  document.getElementById('btnPlayReplay').addEventListener('click', togglePlayReplay);
+
+  document.getElementById('btnEmergency').addEventListener('click', ()=>{
+    if(emergencyOn || !scenarioId) return;
+    emergencyOn = true;
+    const pill = document.getElementById('statusPill');
+    pill.classList.remove('stable'); pill.classList.add('emergency');
+    document.getElementById('statusText').textContent = 'EMERGENCY';
+    document.getElementById('btnRun').disabled = false;
+    document.getElementById('btnEmergency').disabled = true;
+    log(`<span class="tag-alert">EMERGENCY DECLARED</span> — value decay active across ${nodes.length} storage capsules. Recovery window: ${T_MAX} min.`);
+    startClock();
+  });
+
+  document.getElementById('btnRun').addEventListener('click', ()=>{
+    const key = document.getElementById('algoSelect').value;
+    runAlgorithm(key);
+  });
+
+  document.getElementById('btnReset').addEventListener('click', ()=>{
+    if(clockRAF) cancelAnimationFrame(clockRAF);
+    emergencyOn = false; running = false; clockElapsed = 0;
+    document.getElementById('clockVal').textContent = '00.0';
+    const pill = document.getElementById('statusPill');
+    pill.classList.remove('emergency'); pill.classList.add('stable');
+    document.getElementById('statusText').textContent = 'STABLE';
+    document.getElementById('btnRun').disabled = true;
+    clear(logEl);
+    if(currentMode === 'real'){
+      const id = document.getElementById('realIncidentSelect').value;
+      if(id) loadRealScenario(id);
+    } else {
+      fetchSyntheticScenario();
+    }
+  });
+
+  // ---------- Initialization ----------
+  document.getElementById('clockMax').textContent = T_MAX;
+  log(`DVR–TSP Console ready. Connecting to API at: ${API_BASE}`);
+  fetchSyntheticScenario();
+})();
+</script>
+</body>
+</html>

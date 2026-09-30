@@ -1,0 +1,54 @@
+{
+  "5": {
+    "nn": {
+      "statistic": null,
+      "p_value": null,
+      "note": "Too few non-zero differences (<5) for valid Wilcoxon test",
+      "mean_diff": -2.404271597989483
+    },
+    "dijkstra": {
+      "statistic": null,
+      "p_value": null,
+      "note": "Too few non-zero differences (<5) for valid Wilcoxon test",
+      "mean_diff": 0.5280065235990227
+    },
+    "astar": {
+      "statistic": null,
+      "p_value": null,
+      "note": "Too few non-zero differences (<5) for valid Wilcoxon test",
+      "mean_diff": 21.51630832768679
+    },
+    "bfs": {
+      "statistic": null,
+      "p_value": null,
+      "note": "Too few non-zero differences (<5) for valid Wilcoxon test",
+      "mean_diff": 0.5280065235990227
+    }
+  },
+  "8": {
+    "nn": {
+      "statistic": null,
+      "p_value": null,
+      "note": "Too few non-zero differences (<5) for valid Wilcoxon test",
+      "mean_diff": 1.123695291466447
+    },
+    "dijkstra": {
+      "statistic": null,
+      "p_value": null,
+      "note": "Too few non-zero differences (<5) for valid Wilcoxon test",
+      "mean_diff": 18.940756822493807
+    },
+    "astar": {
+      "statistic": null,
+      "p_value": null,
+      "note": "Too few non-zero differences (<5) for valid Wilcoxon test",
+      "mean_diff": 53.05011527201327
+    },
+    "bfs": {
+      "statistic": null,
+      "p_value": null,
+      "note": "Too few non-zero differences (<5) for valid Wilcoxon test",
+      "mean_diff": 21.741872383238263
+    }
+  }
+}
